@@ -5,7 +5,7 @@ loading PCAP data in Elasticsearch for the queries. You will also need to set
 up Pastebin and Twitter accounts with API access to post the resulting data
 automatically.
 
-This is the code that powers (@RDPSnitch)[https://twitter.com/RdpSnitch].
+This is the code that powers [@RDPSnitch](https://twitter.com/RdpSnitch).
 
 ## Setting up
 
