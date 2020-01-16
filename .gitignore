@@ -1,0 +1,4 @@
+venv*/*
+constants.py
+.vscode/
+*.tar
