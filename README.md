@@ -36,8 +36,9 @@ steps:
 2. Edit the `constants-template.py` to add the corresponding values for all of
    the variables. Save as `constants.py`.
 3. Install Python3 and ensure `pip3` is available
-4. Set up a virtual environment by running `pip3 install virtualenv` and then
-   activate the virtual environment.
+4. Set up a virtual environment by running `pip3 install virtualenv`, create
+   the environment with `virtualenv -p python3 venv`, and then activate the
+   virtual environment.
 5. Run `pip install -r requirements.txt`
 6. Execute the script `python rdp-snitch.py`
 

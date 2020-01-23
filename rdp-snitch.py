@@ -1,3 +1,7 @@
+"""This script contains code to pull data from an Elasticsearch index with
+Moloch parsed PCAP data of RDP (3389/TCP) traffic and aggregate it into
+data that is posted to Pastebin and shared on Twitter.
+"""
 from csv import DictWriter
 import json
 from datetime import datetime, timedelta
@@ -9,6 +13,10 @@ import tweepy
 import constants
 import requests
 from elasticsearch import Elasticsearch
+
+__author__ = 'Chapin Bryce'
+__version__ = 20200120
+__desc__ = 'Utility to gather and report RDP Scanner information'
 
 SEARCH_SIZE = 1000
 SCROLL_TIMEOUT = '2m'
@@ -94,11 +102,15 @@ class GatherRDPData(object):
         return all_data
 
     def run_custom_agg(self, agg_fields):
+        """While Elasticsearch does offer aggregations, in testing I had difficulty
+            getting the results date filtered. This method does take longer to run,
+            but does deliver the intended results without too much extra processing time.
+        """
         res = self.es.search(index="sessions2*", size=SEARCH_SIZE, scroll=SCROLL_TIMEOUT,
             _source_includes=agg_fields,
             body={
                 "query":{
-                     "range": {"timestamp": {"from": "now-1d", "to": "now"}}
+                     "range": {"firstPacket": {"from": "now-1d", "to": "now"}}
                 }
             }
         )
@@ -113,6 +125,7 @@ class GatherRDPData(object):
         return sorted_data
 
     def format_txt_report(self, dataset, header):
+        """Basic formatter to prep data for Pastebin"""
         report = f"{header[0]} {header[1]}\n"
 
         for item in dataset:
@@ -120,7 +133,7 @@ class GatherRDPData(object):
         return report
 
 def post_pastebin(data, title, data_fmt):
-
+    """Function to post data to Pastebin."""
     sess_res = requests.post('https://pastebin.com/api/api_login.php', {
         'api_user_password': constants.PASTEBIN_PASS,
         'api_user_name': constants.PASTEBIN_USER,
@@ -153,6 +166,7 @@ def post_pastebin(data, title, data_fmt):
 
 
 if __name__ == "__main__":
+    """ Main organizer to execute the script and post data to Pastebin/Twitter."""
     # Gather data
     gather = GatherRDPData(constants.ELASTICSEARCH_HOST, constants.ELASTICSEARCH_PORT)
     gather.run()
@@ -163,11 +177,9 @@ if __name__ == "__main__":
     pastebin_sleep = 60
 
     users_txt_res = post_pastebin(gather.reports['users_txt'], title_fmt+'users.txt', 'text')
-
     time.sleep(pastebin_sleep)
 
     ips_txt_res = post_pastebin(gather.reports['ips_txt'], title_fmt+'ips.txt', 'text')
-
     time.sleep(pastebin_sleep)
 
     asns_txt_res = post_pastebin(gather.reports['asns_txt'], title_fmt+'asns.txt', 'text')
@@ -180,13 +192,14 @@ if __name__ == "__main__":
 
     pastebin_summary = f"Pastebin links with full 24-hr RDP #Honeypot IOC Lists:\nUsers: {users_txt_res.text}\nIPs: {ips_txt_res.text}\nASNs: {asns_txt_res.text}\n\n#DFIR #InfoSec #CyberSec #SOC #Hunt #Blueteam #SecurityOperations #SecOps #Security"
 
+    # Print a preview
     print("==== Tweet 1 ({} chars):".format(len(summary)))
     print(summary)
     print("\n\n==== Tweet 2 ({} chars):".format(len(pastebin_summary)))
     print(pastebin_summary)
 
     print("Pausing for {}s".format(pastebin_sleep))
-    time.sleep(pastebin_sleep)
+    # time.sleep(pastebin_sleep)
 
     auth = tweepy.OAuthHandler(constants.TWITTER_API_KEY, constants.TWITTER_SECRET)
     auth.set_access_token(constants.TWITTER_ACCESS_TOKEN, constants.TWITTER_ACCESS_SECRET)
