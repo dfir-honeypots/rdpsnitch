@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
     top_ips = '\n'.join([x['srcIp'] for x in gather.ips[:3]])
     top_users = '\n'.join([x['user'] for x in gather.users[:3]])
-    top_asns = '\n'.join([x['srcASN'][:27] for x in gather.asns[:3]]) # Limit ASN Length
+    top_asns = '\n'.join([x['srcASN'][:17]+"..." for x in gather.asns[:3]]) # Limit ASN Length
 
     summary = f"{datetime.now().strftime('%Y-%m-%d')} RDP #Honeypot IOCs - {gather.total:,} scans\n\nTop IPs:\n{top_ips}\n\nTop Users:\n{top_users}\n\nTop ASNs:\n{top_asns}\n\nLinks below with details. #DFIR #InfoSec"
 
