@@ -2,9 +2,7 @@
 Moloch parsed PCAP data of RDP (3389/TCP) traffic and aggregate it into
 data that is posted to Pastebin and shared on Twitter.
 """
-from csv import DictWriter
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from urllib.parse import quote
 import time
 
@@ -20,6 +18,7 @@ __desc__ = 'Utility to gather and report RDP Scanner information'
 
 SEARCH_SIZE = 1000
 SCROLL_TIMEOUT = '2m'
+
 
 class GatherRDPData(object):
     def __init__(self, es_host, es_port):
@@ -37,13 +36,17 @@ class GatherRDPData(object):
         self.total = all_data['__total']
 
         # Run reports
-        self.reports['users_txt'] = self.format_txt_report(all_data['user'], ['count', 'user'])
-        self.reports['ips_txt'] = self.format_txt_report(all_data['srcIp'], ['count', 'srcIp'])
-        self.reports['asns_txt'] = self.format_txt_report(all_data['srcASN'], ['count', 'srcASN'])
+        self.reports['users_txt'] = self.format_txt_report(
+            all_data['user'], ['count', 'user'])
+        self.reports['ips_txt'] = self.format_txt_report(
+            all_data['srcIp'], ['count', 'srcIp'])
+        self.reports['asns_txt'] = self.format_txt_report(
+            all_data['srcASN'], ['count', 'srcASN'])
 
     def agg_scroll(self, data, agg_fields):
         """
-        Borrowed from https://gist.github.com/hmldd/44d12d3a61a8d8077a3091c4ff7b9307
+        Borrowed from
+            https://gist.github.com/hmldd/44d12d3a61a8d8077a3091c4ff7b9307
         """
         all_data = {f: {} for f in agg_fields}
 
@@ -52,7 +55,8 @@ class GatherRDPData(object):
         scroll_size = len(data.get('hits', {}).get('hits', []))
         total_docs = data.get('hits', {}).get('total', {}).get('value', 0)
         all_data['__total'] = total_docs
-        pbar = tqdm(desc=f"Aggregating", total=total_docs, unit=' docs', unit_scale=True)
+        pbar = tqdm(desc=f"Aggregating", total=total_docs, unit=' docs',
+                    unit_scale=True)
 
         while scroll_size > 0:
             "Scrolling..."
@@ -69,7 +73,7 @@ class GatherRDPData(object):
                     continue
 
                 for agg_field in agg_fields:
-                    if not agg_field in field_data:
+                    if agg_field not in field_data:
                         continue
 
                     if isinstance(field_data.get(agg_field), list):
@@ -102,14 +106,18 @@ class GatherRDPData(object):
         return all_data
 
     def run_custom_agg(self, agg_fields):
-        """While Elasticsearch does offer aggregations, in testing I had difficulty
-            getting the results date filtered. This method does take longer to run,
-            but does deliver the intended results without too much extra processing time.
+        """While Elasticsearch does offer aggregations, in testing I
+           had difficulty getting the results date filtered. This method
+           does take longer to run,  but does deliver the intended results
+           without too much extra processing time.
         """
-        res = self.es.search(index="sessions2*", size=SEARCH_SIZE, scroll=SCROLL_TIMEOUT,
+        res = self.es.search(
+            index="sessions2*",
+            size=SEARCH_SIZE,
+            scroll=SCROLL_TIMEOUT,
             _source_includes=agg_fields,
             body={
-                "query":{
+                "query": {
                      "range": {"firstPacket": {"from": "now-1d", "to": "now"}}
                 }
             }
@@ -118,9 +126,10 @@ class GatherRDPData(object):
 
         sorted_data = {'__total': agg_data['__total']}
         for field in agg_fields:
-
-            data_list = [{field: k, 'count': v} for k, v in agg_data[field].items()]
-            sorted_data[field] = sorted(data_list, key=lambda x: x['count'], reverse=True)
+            data_list = [{field: k, 'count': v}
+                         for k, v in agg_data[field].items()]
+            sorted_data[field] = sorted(
+                data_list, key=lambda x: x['count'], reverse=True)
 
         return sorted_data
 
@@ -131,6 +140,7 @@ class GatherRDPData(object):
         for item in dataset:
             report += "{} {}\n".format(item[header[0]], item[header[1]])
         return report
+
 
 def post_pastebin(data, title, data_fmt):
     """Function to post data to Pastebin."""
@@ -154,7 +164,7 @@ def post_pastebin(data, title, data_fmt):
         # Optional
         'api_paste_format': data_fmt,
         'api_paste_name': quote(title),
-        'api_paste_private': 0 # Public
+        'api_paste_private': 0  # Public
     })
     if 'Bad' in res.text:
         print("Error posting to pastebin")
@@ -166,9 +176,13 @@ def post_pastebin(data, title, data_fmt):
 
 
 if __name__ == "__main__":
-    """ Main organizer to execute the script and post data to Pastebin/Twitter."""
+    """
+        Main organizer to execute the script and post data to
+        Pastebin/Twitter.
+    """
     # Gather data
-    gather = GatherRDPData(constants.ELASTICSEARCH_HOST, constants.ELASTICSEARCH_PORT)
+    gather = GatherRDPData(
+        constants.ELASTICSEARCH_HOST, constants.ELASTICSEARCH_PORT)
     gather.run()
 
     # Write to Pastebin
@@ -176,26 +190,35 @@ if __name__ == "__main__":
     title_fmt = "{}_".format(now)
     pastebin_sleep = 60
 
-    users_txt_res = post_pastebin(gather.reports['users_txt'], title_fmt+'users.txt', 'text')
+    users_txt_res = post_pastebin(
+        gather.reports['users_txt'], title_fmt+'users.txt', 'text')
     time.sleep(pastebin_sleep)
 
-    ips_txt_res = post_pastebin(gather.reports['ips_txt'], title_fmt+'ips.txt', 'text')
+    ips_txt_res = post_pastebin(
+        gather.reports['ips_txt'], title_fmt+'ips.txt', 'text')
     time.sleep(pastebin_sleep)
 
-    asns_txt_res = post_pastebin(gather.reports['asns_txt'], title_fmt+'asns.txt', 'text')
+    asns_txt_res = post_pastebin(
+        gather.reports['asns_txt'], title_fmt+'asns.txt', 'text')
 
     top_ips = '\n'.join([x['srcIp'] for x in gather.ips[:3]])
     top_users = '\n'.join([x['user'] for x in gather.users[:3]])
-    top_asns = '\n'.join([x['srcASN'] for x in gather.asns[:3]]) # Limit ASN Length
+    top_asns = '\n'.join([x['srcASN'] for x in gather.asns[:3]])
 
-    summary = f"{datetime.now().strftime('%Y-%m-%d')} RDP #Honeypot IOCs - {gather.total:,} scans\n\nTop IPs:\n{top_ips}\n\nTop Users:\n{top_users}\n\nTop ASNs:\n{top_asns}"
+    summary = f"{datetime.now().strftime('%Y-%m-%d')} RDP #Honeypot IOCs "
+    summary += f"- {gather.total:,} scans\n\nTop IPs:\n{top_ips}\n\n"
+    summary += f"Top Users:\n{top_users}\n\nTop ASNs:\n{top_asns}"
+
     if len(summary) > 230:
-        summary = summary[:230]+"..." # Trim ASNs if needed
+        summary = summary[:230]+"..."  # Trim ASNs if needed
     summary += "\n\nLinks below with details. #DFIR #InfoSec"
 
-    pastebin_summary = f"Pastebin links with full 24-hr RDP #Honeypot IOC Lists:\nUsers: {users_txt_res.text}\nIPs: {ips_txt_res.text}\nASNs: {asns_txt_res.text}"
+    pastebin_summary = "Pastebin links with full 24-hr RDP "
+    pastebin_summary += f"#Honeypot IOC Lists:\nUsers: {users_txt_res.text}\n"
+    pastebin_summary += f"IPs: {ips_txt_res.text}\nASNs: {asns_txt_res.text}"
     if len(pastebin_summary) <= 190:
-        pastebin_summary += "\n\n#DFIR #InfoSec #CyberSec #SOC #Hunt #Blueteam #SecurityOperations #SecOps #Security"
+        pastebin_summary += "\n\n#DFIR #InfoSec #CyberSec #SOC #Hunt "
+        pastebin_summary += "#Blueteam #SecurityOperations #SecOps #Security"
     elif len(summary) > 280:
         pastebin_summary = pastebin_summary[:270]+"..."
 
@@ -208,11 +231,13 @@ if __name__ == "__main__":
     print("Pausing for {}s".format(pastebin_sleep))
     # time.sleep(pastebin_sleep)
 
-    auth = tweepy.OAuthHandler(constants.TWITTER_API_KEY, constants.TWITTER_SECRET)
-    auth.set_access_token(constants.TWITTER_ACCESS_TOKEN, constants.TWITTER_ACCESS_SECRET)
+    auth = tweepy.OAuthHandler(
+        constants.TWITTER_API_KEY, constants.TWITTER_SECRET)
+    auth.set_access_token(
+        constants.TWITTER_ACCESS_TOKEN, constants.TWITTER_ACCESS_SECRET)
 
     tw_api = tweepy.API(auth)
 
     resp1 = tw_api.update_status(summary)
-    resp2 = tw_api.update_status(pastebin_summary, in_reply_to_status_id=resp1.id)
-
+    resp2 = tw_api.update_status(
+        pastebin_summary, in_reply_to_status_id=resp1.id)
