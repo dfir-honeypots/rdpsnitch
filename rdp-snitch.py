@@ -209,18 +209,18 @@ if __name__ == "__main__":
     summary += f"- {gather.total:,} scans\n\nTop IPs:\n{top_ips}\n\n"
     summary += f"Top Users:\n{top_users}\n\nTop ASNs:\n{top_asns}"
 
-    if len(summary) > 230:
-        summary = summary[:230]+"..."  # Trim ASNs if needed
+    if len(summary) > 200:
+        summary = summary[:200]+"..."  # Trim ASNs if needed
     summary += "\n\nLinks below with details. #DFIR #InfoSec"
 
     pastebin_summary = "Pastebin links with full 24-hr RDP "
     pastebin_summary += f"#Honeypot IOC Lists:\nUsers: {users_txt_res.text}\n"
     pastebin_summary += f"IPs: {ips_txt_res.text}\nASNs: {asns_txt_res.text}"
     if len(pastebin_summary) <= 190:
-        pastebin_summary += "\n\n#DFIR #InfoSec #CyberSec #SOC #Hunt "
-        pastebin_summary += "#Blueteam #SecurityOperations #SecOps #Security"
-    elif len(summary) > 280:
-        pastebin_summary = pastebin_summary[:270]+"..."
+        pastebin_summary += "\n\n#DFIR #InfoSec #CyberSec #SOC "
+        pastebin_summary += "#Blueteam #SecOps #Security"
+    elif len(summary) > 270:
+        pastebin_summary = pastebin_summary[:260]+"..."
 
     # Print a preview
     print("==== Tweet 1 ({} chars):".format(len(summary)))
